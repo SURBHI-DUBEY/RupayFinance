@@ -1,0 +1,22 @@
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.example.org/ns/LoanApplication"
+            targetNamespace="http://www.example.org/ns/LoanApplication" elementFormDefault="qualified">
+  <xsd:element name="Loan_ApplicationRequest">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="application_number" type="xsd:string"/>
+        <xsd:element name="Customer_id" type="xsd:string"/>
+        <xsd:element name="Loan_type" type="xsd:string"/>
+        <xsd:element name="Loan_amount" type="xsd:decimal"/>
+        <xsd:element name="status" type="xsd:string"/>
+        
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="Loan_ApplicationResponse">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="status" type="xsd:string"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+</xsd:schema>

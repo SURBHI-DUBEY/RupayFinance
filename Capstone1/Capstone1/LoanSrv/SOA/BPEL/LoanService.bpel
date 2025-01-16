@@ -1,0 +1,167 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<!--
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  Oracle JDeveloper BPEL Designer 
+  
+  Created: Thu May 16 03:57:13 IST 2024
+  Author:  surbhi
+  Type: BPEL 2.0 Process
+  Purpose: Synchronous BPEL Process
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-->
+<process name="LoanService"
+               targetNamespace="http://xmlns.oracle.com/Capstone1/LoanSrv/LoanService"
+               xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+               xmlns:client="http://xmlns.oracle.com/Capstone1/LoanSrv/LoanService"
+               xmlns:ora="http://schemas.oracle.com/xpath/extension"
+               xmlns:ui="http://xmlns.oracle.com/soa/designer"
+               xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:bpel="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:ns1="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/LoanSrv/CustomerDB"
+         xmlns:ns2="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/LoanSrv/LoanApplicationDB"
+         xmlns:ns3="http://www.example.org/ns/LoanApplication"
+         xmlns:ns4="http://xmlns.oracle.com/pcbpel/adapter/db/top/CustomerDB"
+         xmlns:oraext="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.ExtFunc"
+         xmlns:bpm="http://xmlns.oracle.com/bpmn20/extensions"
+         xmlns:xp20="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.Xpath20"
+         xmlns:ess="http://xmlns.oracle.com/scheduler" xmlns:hwf="http://xmlns.oracle.com/bpel/workflow/xpath"
+         xmlns:xref="http://www.oracle.com/XSL/Transform/java/oracle.tip.xref.xpath.XRefXPathFunctions"
+         xmlns:dvm="http://www.oracle.com/XSL/Transform/java/oracle.tip.dvm.LookupValue"
+         xmlns:bpws="http://schemas.xmlsoap.org/ws/2003/03/business-process/"
+         xmlns:xdk="http://schemas.oracle.com/bpel/extension/xpath/function/xdk"
+         xmlns:ids="http://xmlns.oracle.com/bpel/services/IdentityService/xpath"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:ldap="http://schemas.oracle.com/xpath/extension/ldap"
+         xmlns:ns5="http://xmlns.oracle.com/pcbpel/adapter/db/top/LoanApplicationDB">
+
+    <import ui:processWSDL="true" namespace="http://xmlns.oracle.com/Capstone1/LoanSrv/LoanService" location="../WSDLs/LoanService.wsdl" importType="http://schemas.xmlsoap.org/wsdl/"/>
+    <!-- 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        PARTNERLINKS                                                      
+        List of services participating in this BPEL process               
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    --> 
+  <partnerLinks>
+    <!-- 
+      The 'client' role represents the requester of this service. It is 
+      used for callback. The location and correlation information associated
+      with the client role are automatically set using WS-Addressing.
+    -->
+    <partnerLink name="loanservice_client" partnerLinkType="client:LoanService" myRole="LoanServiceProvider"/>
+    <partnerLink name="CustomerDB" partnerLinkType="ns1:CustomerDB_plt" partnerRole="CustomerDB_role"/>
+    <partnerLink name="LoanApplicationDB" partnerLinkType="ns2:LoanApplicationDB_plt"
+                 partnerRole="LoanApplicationDB_role"/>
+  </partnerLinks>
+
+  <!-- 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      VARIABLES                                                        
+      List of messages and XML documents used within this BPEL process 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  -->
+  <variables>
+    <!-- Reference to the message passed as input during initiation -->
+    <variable name="inputVariable" messageType="client:LoanServiceRequestMessage"/>
+
+    <!-- Reference to the message that will be returned to the requester-->
+    <variable name="outputVariable" messageType="client:LoanServiceResponseMessage"/>
+    <variable name="CheckCustomer_CustomerDBSelect_InputVariable" messageType="ns1:CustomerDBSelect_inputParameters"/>
+    <variable name="CheckCustomer_CustomerDBSelect_OutputVariable" messageType="ns1:CustomerCollection_msg"/>
+    <variable name="CheckApplication_LoanApplicationDBSelect_InputVariable"
+              messageType="ns2:LoanApplicationDBSelect_inputParameters"/>
+    <variable name="CheckApplication_LoanApplicationDBSelect_OutputVariable"
+              messageType="ns2:LoanApplicationCollection_msg"/>
+    <variable name="InsertApplication_insert_InputVariable" messageType="ns2:LoanApplicationCollection_msg"/>
+  </variables>
+
+  <!-- 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     ORCHESTRATION LOGIC                                               
+     Set of activities coordinating the flow of messages across the    
+     services integrated within this business process                  
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  -->
+  <sequence name="main">
+
+    <!-- Receive input from requestor. (Note: This maps to operation defined in LoanService.wsdl) -->
+    <receive name="receiveInput" partnerLink="loanservice_client" portType="client:LoanService" operation="process" variable="inputVariable" createInstance="yes"/>
+    <assign name="AssCheckCust">
+      <copy>
+        <from>$inputVariable.payload/ns3:Customer_id</from>
+        <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$CheckCustomer_CustomerDBSelect_InputVariable.CustomerDBSelect_inputParameters/ns4:cid</to>
+      </copy>
+    </assign>
+    <invoke name="CheckCustomer" bpelx:invokeAsDetail="no" partnerLink="CustomerDB" portType="ns1:CustomerDB_ptt"
+            operation="CustomerDBSelect" inputVariable="CheckCustomer_CustomerDBSelect_InputVariable"
+            outputVariable="CheckCustomer_CustomerDBSelect_OutputVariable"/>
+    <if name="If1">
+      <condition>$CheckCustomer_CustomerDBSelect_OutputVariable.CustomerCollection/ns4:Customer/ns4:customerId != $inputVariable.payload/ns3:Customer_id</condition>
+      <assign name="AssCustNotExist">
+        <copy>
+          <from>'THE CUSTOMER DOES NOT EXISTS'</from>
+          <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns3:status</to>
+        </copy>
+      </assign>
+      <else>
+        <sequence name="Sequence1">
+          <assign name="CheckApp">
+            <copy>
+              <from>$inputVariable.payload/ns3:application_number</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$CheckApplication_LoanApplicationDBSelect_InputVariable.LoanApplicationDBSelect_inputParameters/ns5:appnum</to>
+            </copy>
+          </assign>
+          <invoke name="CheckApplication" bpelx:invokeAsDetail="no" partnerLink="LoanApplicationDB"
+                  portType="ns2:LoanApplicationDB_ptt" operation="LoanApplicationDBSelect"
+                  inputVariable="CheckApplication_LoanApplicationDBSelect_InputVariable"
+                  outputVariable="CheckApplication_LoanApplicationDBSelect_OutputVariable"/>
+          <if name="If2">
+            <condition>$CheckApplication_LoanApplicationDBSelect_OutputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:applicationNumber = $inputVariable.payload/ns3:application_number</condition>
+            <assign name="AssAPPExist">
+              <copy>
+                <from>'THE APPLICATION IS EXIST FOR THE CUSTOMER'</from>
+                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns3:status</to>
+              </copy>
+            </assign>
+            <else>
+              <sequence name="Sequence2">
+                <assign name="AssInsertApp">
+                  <copy>
+                    <from>$inputVariable.payload/ns3:application_number</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InsertApplication_insert_InputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:applicationNumber</to>
+                  </copy>
+                  <copy>
+                    <from>$inputVariable.payload/ns3:Customer_id</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InsertApplication_insert_InputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:customerId</to>
+                  </copy>
+                  <copy>
+                    <from>$inputVariable.payload/ns3:Loan_type</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InsertApplication_insert_InputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:loanType</to>
+                  </copy>
+                  <copy>
+                    <from>$inputVariable.payload/ns3:Loan_amount</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InsertApplication_insert_InputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:loanAmount</to>
+                  </copy>
+                  <copy>
+                    <from>$inputVariable.payload/ns3:status</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InsertApplication_insert_InputVariable.LoanApplicationCollection/ns5:LoanApplication/ns5:status</to>
+                  </copy>
+                </assign>
+                <invoke name="InsertApplication" bpelx:invokeAsDetail="no" partnerLink="LoanApplicationDB"
+                        portType="ns2:LoanApplicationDB_ptt" operation="insert"
+                        inputVariable="InsertApplication_insert_InputVariable"/>
+                <assign name="Success">
+                  <copy>
+                    <from>'New Application has been inseted'</from>
+                    <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns3:status</to>
+                  </copy>
+                </assign>
+              </sequence>
+            </else>
+          </if>
+        </sequence>
+      </else>
+    </if>
+    <!-- Generate reply to synchronous request -->
+    <reply name="replyOutput" partnerLink="loanservice_client" portType="client:LoanService" operation="process" variable="outputVariable"/>
+  </sequence>
+</process>

@@ -1,0 +1,12 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body xmlns:ns1="http://www.example.org/ns/LoanApp">
+    <ns1:LoanApplication>
+      <ns1:application_number>1</ns1:application_number>
+      <ns1:customer_id>101</ns1:customer_id>
+      <ns1:Loan_type>Home Loan</ns1:Loan_type>
+      <ns1:Loan_amount>200000</ns1:Loan_amount>
+      <ns1:status></ns1:status>
+      
+    </ns1:LoanApplication>
+  </soap:Body>
+</soap:Envelope>

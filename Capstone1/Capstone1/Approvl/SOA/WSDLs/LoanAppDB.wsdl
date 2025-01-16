@@ -1,0 +1,38 @@
+<wsdl:definitions
+     name="LoanAppDB"
+     targetNamespace="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/Approvl/LoanAppDB"
+     xmlns:tns="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/Approvl/LoanAppDB"
+     xmlns:jca="http://xmlns.oracle.com/pcbpel/wsdl/jca/"
+     xmlns:plt="http://schemas.xmlsoap.org/ws/2003/05/partner-link/"
+     xmlns:top="http://xmlns.oracle.com/pcbpel/adapter/db/top/LoanAppDB"
+     xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    >
+  <plt:partnerLinkType name="LoanAppDB_plt" >
+    <plt:role name="LoanAppDB_role" >
+      <plt:portType name="tns:LoanAppDB_ptt" />
+    </plt:role>
+  </plt:partnerLinkType>
+    <wsdl:types>
+      <schema xmlns="http://www.w3.org/2001/XMLSchema" >
+        <import namespace="http://xmlns.oracle.com/pcbpel/adapter/db/top/LoanAppDB" schemaLocation="../Schemas/LoanAppDB_table.xsd" />
+      </schema>
+    </wsdl:types>
+    <wsdl:message name="LoanAppDBSelect_inputParameters">
+        <wsdl:part name="LoanAppDBSelect_inputParameters" element="top:LoanAppDBSelect_appnumInputParameters"/>
+    </wsdl:message>
+    <wsdl:message name="LoanApplicationCollection_msg">
+        <wsdl:part name="LoanApplicationCollection" element="top:LoanApplicationCollection"/>
+    </wsdl:message>
+    <wsdl:portType name="LoanAppDB_ptt">
+        <wsdl:operation name="insert">
+            <wsdl:input message="tns:LoanApplicationCollection_msg"/>
+        </wsdl:operation>
+        <wsdl:operation name="update">
+            <wsdl:input message="tns:LoanApplicationCollection_msg"/>
+        </wsdl:operation>
+        <wsdl:operation name="LoanAppDBSelect">
+            <wsdl:input message="tns:LoanAppDBSelect_inputParameters"/>
+            <wsdl:output message="tns:LoanApplicationCollection_msg"/>
+        </wsdl:operation>
+    </wsdl:portType>
+</wsdl:definitions>

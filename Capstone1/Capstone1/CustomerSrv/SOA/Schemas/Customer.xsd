@@ -1,0 +1,28 @@
+<?xml version= '1.0' encoding= 'UTF-8' ?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.example.org/ns/Customer"
+     targetNamespace="http://www.example.org/ns/Customer" elementFormDefault="qualified">
+    <xsd:element name="CustomerRequest">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="Customer_id" type="xsd:integer"/>
+                <xsd:element name="name" type="xsd:string"/>
+                <xsd:element name="gender" type="genderType"/>
+                <xsd:element name="contact_details" type="xsd:string"/>
+                <xsd:element name="cibil" type="xsd:string"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    <xsd:element name="CustomerResponse">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="status" type="xsd:string"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    <xsd:simpleType name="genderType">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="Male"/>
+            <xsd:enumeration value="Female"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+</xsd:schema>

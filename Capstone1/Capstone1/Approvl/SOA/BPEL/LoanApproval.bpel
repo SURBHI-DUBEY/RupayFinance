@@ -1,0 +1,305 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<!--
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  Oracle JDeveloper BPEL Designer 
+  
+  Created: Thu May 16 04:53:58 IST 2024
+  Author:  surbhi
+  Type: BPEL 2.0 Process
+  Purpose: Asynchronous BPEL Process
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-->
+<process name="LoanApproval"
+         targetNamespace="http://xmlns.oracle.com/Capstone1/Approvl/LoanApproval"
+         xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:client="http://xmlns.oracle.com/Capstone1/Approvl/LoanApproval"
+         xmlns:ora="http://schemas.oracle.com/xpath/extension"
+         xmlns:ui="http://xmlns.oracle.com/soa/designer"
+         xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:bpel="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:task="http://xmlns.oracle.com/bpel/workflow/task"
+         xmlns:taskservice="http://xmlns.oracle.com/bpel/workflow/taskService"
+         xmlns:wfcommon="http://xmlns.oracle.com/bpel/workflow/common"
+         xmlns:oraext="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.ExtFunc"
+         xmlns:bpm="http://xmlns.oracle.com/bpmn20/extensions"
+         xmlns:xp20="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.Xpath20"
+         xmlns:ess="http://xmlns.oracle.com/scheduler" xmlns:hwf="http://xmlns.oracle.com/bpel/workflow/xpath"
+         xmlns:xref="http://www.oracle.com/XSL/Transform/java/oracle.tip.xref.xpath.XRefXPathFunctions"
+         xmlns:dvm="http://www.oracle.com/XSL/Transform/java/oracle.tip.dvm.LookupValue"
+         xmlns:bpws="http://schemas.xmlsoap.org/ws/2003/03/business-process/"
+         xmlns:xdk="http://schemas.oracle.com/bpel/extension/xpath/function/xdk"
+         xmlns:ids="http://xmlns.oracle.com/bpel/services/IdentityService/xpath"
+         xmlns:ldap="http://schemas.oracle.com/xpath/extension/ldap"
+         xmlns:wf="http://schemas.oracle.com/bpel/extensions/workflow"
+         xmlns:ns1="http://xmlns.oracle.com/bpel/workflow/TaskEvidenceService"
+         xmlns:ns2="http://www.example.org/ns/LoanApplication"
+         xmlns:ns3="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/Approvl/CustomerDB"
+         xmlns:ns4="http://xmlns.oracle.com/pcbpel/adapter/db/top/CustomerDB"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:ns5="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/Approvl/LoanAppDB"
+         xmlns:ns6="http://xmlns.oracle.com/pcbpel/adapter/db/top/LoanAppDB">
+
+    <import ui:processWSDL="true" namespace="http://xmlns.oracle.com/Capstone1/Approvl/LoanApproval" location="../WSDLs/LoanApproval.wsdl" importType="http://schemas.xmlsoap.org/wsdl/"/>
+    <!-- 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        PARTNERLINKS                                                      
+        List of services participating in this BPEL process               
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    --> 
+    <partnerLinks>
+        <!-- 
+      The 'client' role represents the requester of this service. It is 
+      used for callback. The location and correlation information associated
+      with the client role are automatically set using WS-Addressing.
+    -->
+        <partnerLink name="loanapproval_client" partnerLinkType="client:LoanApproval" myRole="LoanApprovalProvider" partnerRole="LoanApprovalRequester"/>
+        <partnerLink name="CustomerDB" partnerLinkType="ns3:CustomerDB_plt" partnerRole="CustomerDB_role"/>
+        <partnerLink name="LoanAppDB" partnerLinkType="ns5:LoanAppDB_plt" partnerRole="LoanAppDB_role"/>
+        <partnerLink name="Manager_Human.TaskService_1" partnerLinkType="taskservice:TaskService"
+                     partnerRole="TaskService" myRole="TaskServiceCallbackListener"/>
+    </partnerLinks>
+
+    <!-- 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        VARIABLES                                                        
+        List of messages and XML documents used within this BPEL process 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    -->
+    <variables>
+        <!-- Reference to the message passed as input during initiation -->
+        <variable name="inputVariable" messageType="client:LoanApprovalRequestMessage"/>
+
+        <!-- Reference to the message that will be sent back to the requester during callback -->
+        <variable name="outputVariable" messageType="client:LoanApprovalResponseMessage"/>
+        <variable name="CheckCibil_CustomerDBSelect_InputVariable" messageType="ns3:CustomerDBSelect_inputParameters"/>
+        <variable name="CheckCibil_CustomerDBSelect_OutputVariable" messageType="ns3:CustomerCollection_msg"/>
+        <variable name="CheckApplication_LoanAppDBSelect_InputVariable"
+                  messageType="ns5:LoanAppDBSelect_inputParameters"/>
+        <variable name="CheckApplication_LoanAppDBSelect_OutputVariable"
+                  messageType="ns5:LoanApplicationCollection_msg"/>
+        <variable name="InvokeAutoReject_update_InputVariable" messageType="ns5:LoanApplicationCollection_msg"/>
+        <variable name="Manager_Human1_globalVariable" messageType="taskservice:taskMessage"/>
+        <variable name="InvokeApprove_update_InputVariable" messageType="ns5:LoanApplicationCollection_msg"/>
+        <variable name="Invoke2_update_InputVariable" messageType="ns5:LoanApplicationCollection_msg"/>
+        <variable name="InvokeReject_update_InputVariable" messageType="ns5:LoanApplicationCollection_msg"/>
+    </variables>
+
+    <!-- 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+       ORCHESTRATION LOGIC                                               
+       Set of activities coordinating the flow of messages across the    
+       services integrated within this business process                  
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    -->
+    <sequence name="main">
+        <!-- Receive input from requestor. (Note: This maps to operation defined in LoanApproval.wsdl) -->
+        <receive name="receiveInput" partnerLink="loanapproval_client" portType="client:LoanApproval" operation="process" variable="inputVariable" createInstance="yes"/>
+        <assign name="AssignAppNo">
+            <copy>
+                <from>$inputVariable.payload/ns2:application_number</from>
+                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$CheckApplication_LoanAppDBSelect_InputVariable.LoanAppDBSelect_inputParameters/ns6:appnum</to>
+            </copy>
+        </assign>
+        <invoke name="CheckApplication" partnerLink="LoanAppDB" portType="ns5:LoanAppDB_ptt"
+                operation="LoanAppDBSelect" inputVariable="CheckApplication_LoanAppDBSelect_InputVariable"
+                outputVariable="CheckApplication_LoanAppDBSelect_OutputVariable" bpelx:invokeAsDetail="no"/>
+        <if name="If1">
+            <condition>$CheckApplication_LoanAppDBSelect_OutputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:applicationNumber != ''</condition>
+            <sequence>
+                <assign name="AssignCustID">
+                    <copy>
+                        <from>$inputVariable.payload/ns2:Customer_id</from>
+                        <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$CheckCibil_CustomerDBSelect_InputVariable.CustomerDBSelect_inputParameters/ns4:cid</to>
+                    </copy>
+                </assign>
+                <invoke name="CheckCibil" partnerLink="CustomerDB" portType="ns3:CustomerDB_ptt"
+                        operation="CustomerDBSelect" inputVariable="CheckCibil_CustomerDBSelect_InputVariable"
+                        outputVariable="CheckCibil_CustomerDBSelect_OutputVariable" bpelx:invokeAsDetail="no"/>
+                <if name="If2">
+                    <documentation>
+                        <![CDATA[CIBIL<500]]>
+                    </documentation>
+                    <condition>$CheckCibil_CustomerDBSelect_OutputVariable.CustomerCollection/ns4:Customer/ns4:cibil &lt; 500</condition>
+                    <sequence name="Sequence2">
+                        <assign name="AssignAutoReject">
+                            <copy>
+                                <from>$inputVariable.payload/ns2:Customer_id</from>
+                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeAutoReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:customerId</to>
+                            </copy>
+                            <copy>
+                                <from>$inputVariable.payload/ns2:Loan_type</from>
+                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeAutoReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanType</to>
+                            </copy>
+                            <copy>
+                                <from>$inputVariable.payload/ns2:Loan_amount</from>
+                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeAutoReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanAmount</to>
+                            </copy>
+                            <copy>
+                                <from>'Rejected''</from>
+                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeAutoReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:status</to>
+                            </copy>
+                            <copy>
+                                <from>$inputVariable.payload/ns2:application_number</from>
+                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeAutoReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:applicationNumber</to>
+                            </copy>
+                        </assign>
+                        <invoke name="InvokeAutoReject" partnerLink="LoanAppDB" portType="ns5:LoanAppDB_ptt"
+                                operation="update" inputVariable="InvokeAutoReject_update_InputVariable"
+                                bpelx:invokeAsDetail="no"/>
+                    </sequence>
+                    <else>
+                        <documentation>
+                            <![CDATA[500<CIBIL<750]]>
+                        </documentation>
+                        <sequence>
+                            <scope name="Manager_Human2"
+                                   xmlns:wf="http://schemas.oracle.com/bpel/extensions/workflow"
+                                   wf:key="Manager_Human1_globalVariable">
+                                <bpelx:annotation>
+                                    <bpelx:pattern patternName="bpelx:workflow"></bpelx:pattern>
+                                </bpelx:annotation>
+                                <variables>
+                                    <variable name="initiateTaskInput" messageType="taskservice:initiateTaskMessage"/>
+                                    <variable name="initiateTaskResponseMessage"
+                                              messageType="taskservice:initiateTaskResponseMessage"/>
+                                </variables>
+                                <sequence>
+                                    <assign name="Manager_Human2_AssignTaskAttributes">
+                                        <copy>
+                                            <from>number(3)</from>
+                                            <to variable="initiateTaskInput" part="payload"><query>task:task/task:priority</query></to>
+                                        </copy>
+                                        <copy>
+                                            <from>number(3)</from>
+                                            <to variable="initiateTaskInput" part="payload"><query>task:task/task:priority</query></to>
+                                        </copy>
+                                        <copy>
+                                            <from><literal><payload xmlns="http://xmlns.oracle.com/bpel/workflow/task">
+	<Loan_ApplicationRequest xmlns="http://www.example.org/ns/LoanApplication"/> 
+</payload></literal></from>
+                                            <to variable="initiateTaskInput" part="payload"><query>task:task/task:payload</query></to>
+                                        </copy>
+                                        <copy>
+                                            <from variable="outputVariable" part="payload"/>
+                                            <to variable="initiateTaskInput" part="payload"><query>task:task/task:payload/ns2:Loan_ApplicationRequest</query></to>
+                                        </copy>
+                                    </assign>
+                                    <invoke name="initiateTask_Manager_Human2" partnerLink="Manager_Human.TaskService_1"
+                                            operation="initiateTask" portType="taskservice:TaskService"
+                                            inputVariable="initiateTaskInput"
+                                            outputVariable="initiateTaskResponseMessage"/>
+                                    <receive name="receiveCompletedTask_Manager_Human2"
+                                             partnerLink="Manager_Human.TaskService_1"
+                                             portType="taskservice:TaskServiceCallback" operation="onTaskCompleted"
+                                             variable="Manager_Human1_globalVariable" createInstance="no"/>
+                                </sequence>
+                            </scope>
+                            <if name="taskIf">
+                                <documentation>
+                                    <![CDATA[Task outcome is APPROVE]]>
+                                </documentation>
+                                <condition>$Manager_Human1_globalVariable.payload/task:systemAttributes/task:outcome = 'APPROVE'</condition>
+                                <sequence>
+                                    <assign name="CopyPayloadFromTask">
+                                        <copy>
+                                            <from>$Manager_Human1_globalVariable.payload/task:payload/ns2:Loan_ApplicationRequest</from>
+                                            <to>$outputVariable.payload</to>
+                                        </copy>
+                                        <copy>
+                                            <from>$inputVariable.payload/ns2:application_number</from>
+                                            <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeApprove_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:applicationNumber</to>
+                                        </copy>
+                                        <copy>
+                                            <from>$inputVariable.payload/ns2:Customer_id</from>
+                                            <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeApprove_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:customerId</to>
+                                        </copy>
+                                        <copy>
+                                            <from>$inputVariable.payload/ns2:Loan_type</from>
+                                            <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeApprove_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanType</to>
+                                        </copy>
+                                        <copy>
+                                            <from>$inputVariable.payload/ns2:Loan_amount</from>
+                                            <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeApprove_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanAmount</to>
+                                        </copy>
+                                        <copy>
+                                            <from>'Approved'</from>
+                                            <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeApprove_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:status</to>
+                                        </copy>
+                                    </assign>
+                                    <invoke name="InvokeApprove" partnerLink="LoanAppDB"
+                                            portType="ns5:LoanAppDB_ptt" operation="update"
+                                            inputVariable="InvokeApprove_update_InputVariable"
+                                            bpelx:invokeAsDetail="no"/>
+                                </sequence>
+                                <elseif>
+                                    <documentation>
+                                        <![CDATA[Task outcome is REJECT]]>
+                                    </documentation>
+                                    <condition>$Manager_Human1_globalVariable.payload/task:systemAttributes/task:outcome = 'REJECT'</condition>
+                                    <sequence>
+                                        <assign name="CopyPayloadFromTask">
+                                            <copy>
+                                                <from>$Manager_Human1_globalVariable.payload/task:payload/ns2:Loan_ApplicationRequest</from>
+                                                <to>$outputVariable.payload</to>
+                                            </copy>
+                                            <copy>
+                                                <from>$inputVariable.payload/ns2:application_number</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:applicationNumber</to>
+                                            </copy>
+                                            <copy>
+                                                <from>$inputVariable.payload/ns2:Customer_id</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:customerId</to>
+                                            </copy>
+                                            <copy>
+                                                <from>$inputVariable.payload/ns2:Loan_type</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanType</to>
+                                            </copy>
+                                            <copy>
+                                                <from>$inputVariable.payload/ns2:Loan_amount</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:loanAmount</to>
+                                            </copy>
+                                            <copy>
+                                                <from>'Rejected'</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$InvokeReject_update_InputVariable.LoanApplicationCollection/ns6:LoanApplication/ns6:status</to>
+                                            </copy>
+                                        </assign>
+                                        <invoke name="InvokeReject" partnerLink="LoanAppDB"
+                                                portType="ns5:LoanAppDB_ptt" operation="update"
+                                                inputVariable="InvokeReject_update_InputVariable"
+                                                bpelx:invokeAsDetail="no"/>
+                                    </sequence>
+                                </elseif>
+                                <else>
+                                    <sequence>
+                                        <assign name="CopyPayloadFromTask">
+                                            <copy>
+                                                <from>$Manager_Human1_globalVariable.payload/task:payload/ns2:Loan_ApplicationRequest</from>
+                                                <to>$outputVariable.payload</to>
+                                            </copy>
+                                            <copy>
+                                                <from>'FAILED'</from>
+                                                <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns2:status</to>
+                                            </copy>
+                                        </assign>
+                                    </sequence>
+                                </else>
+                            </if>
+                        </sequence>
+                    </else>
+                </if>
+            </sequence>
+            <else>
+                <assign name="AssignAppNotExists">
+                    <copy>
+                        <from>'The Application does not exist'</from>
+                        <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns2:status</to>
+                    </copy>
+                </assign>
+            </else>
+        </if>
+        <!-- 
+          Asynchronous callback to the requester. (Note: the callback location and correlation id is transparently handled using WS-addressing.)
+        -->
+        <invoke name="callbackClient" partnerLink="loanapproval_client" portType="client:LoanApprovalCallback" operation="processResponse" inputVariable="outputVariable"/>
+    </sequence>
+</process>

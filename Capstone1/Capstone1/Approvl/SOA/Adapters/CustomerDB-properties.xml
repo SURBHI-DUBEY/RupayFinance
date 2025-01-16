@@ -1,0 +1,25 @@
+<?xml version = '1.0' encoding = 'UTF-8'?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+   <entry key="APP.CUSTOMER.CONTACT_DETAILS:db_column_not_null">false</entry>
+   <entry key="APP.CUSTOMER.CONTACT_DETAILS:db_column_size">100</entry>
+   <entry key="APP.CUSTOMER.GENDER:db_column_type">VARCHAR</entry>
+   <entry key="APP.CUSTOMER.NAME:db_column_type">VARCHAR</entry>
+   <entry key="return_single_result_set">false</entry>
+   <entry key="APP.CUSTOMER.CIBIL:db_column_not_null">false</entry>
+   <entry key="APP.CUSTOMER:db_table_type">TABLE</entry>
+   <entry key="APP.CUSTOMER.CUSTOMER_ID:db_column_not_null">true</entry>
+   <entry key="APP.CUSTOMER.GENDER:db_column_not_null">false</entry>
+   <entry key="root_descriptor_alias">APP.CUSTOMER</entry>
+   <entry key="APP.CUSTOMER:db_column_4">CIBIL</entry>
+   <entry key="APP.CUSTOMER:db_column_3">CONTACT_DETAILS</entry>
+   <entry key="APP.CUSTOMER.GENDER:db_column_size">10</entry>
+   <entry key="APP.CUSTOMER:db_column_2">GENDER</entry>
+   <entry key="APP.CUSTOMER.CONTACT_DETAILS:db_column_type">VARCHAR</entry>
+   <entry key="APP.CUSTOMER:db_column_1">NAME</entry>
+   <entry key="APP.CUSTOMER:db_column_0">CUSTOMER_ID</entry>
+   <entry key="APP.CUSTOMER.NAME:db_column_size">100</entry>
+   <entry key="APP.CUSTOMER.CUSTOMER_ID:db_column_type">INTEGER</entry>
+   <entry key="APP.CUSTOMER.CIBIL:db_column_type">INTEGER</entry>
+   <entry key="APP.CUSTOMER.NAME:db_column_not_null">false</entry>
+</properties>

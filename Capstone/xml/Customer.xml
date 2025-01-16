@@ -1,0 +1,11 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body xmlns:ns1="http://www.example.org/ns/Customer">
+    <ns1:Customer>
+      <ns1:Customer_id>101</ns1:Customer_id>
+      <ns1:name>Aly</ns1:name>
+      <ns1:gender>Male</ns1:gender>
+      <ns1:contact_details>555-555-5555</ns1:contact_details>
+      <ns1:cibil>750</ns1:cibil>
+    </ns1:Customer>
+  </soap:Body>
+</soap:Envelope>

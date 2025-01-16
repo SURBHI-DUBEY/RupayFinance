@@ -1,0 +1,135 @@
+<?xml version = "1.0" encoding = "UTF-8" ?>
+<!--
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  Oracle JDeveloper BPEL Designer 
+  
+  Created: Thu May 16 01:35:59 IST 2024
+  Author:  surbhi
+  Type: BPEL 2.0 Process
+  Purpose: Synchronous BPEL Process
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-->
+<process name="CustomerService"
+               targetNamespace="http://xmlns.oracle.com/Capstone1/CustomerSrv/CustomerService"
+               xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+               xmlns:client="http://xmlns.oracle.com/Capstone1/CustomerSrv/CustomerService"
+               xmlns:ora="http://schemas.oracle.com/xpath/extension"
+               xmlns:ui="http://xmlns.oracle.com/soa/designer"
+               xmlns:bpelx="http://schemas.oracle.com/bpel/extension"
+         xmlns:bpel="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+         xmlns:ns1="http://xmlns.oracle.com/pcbpel/adapter/db/Capstone1/CustomerSrv/CustomerDB"
+         xmlns:ns2="http://www.example.org/ns/Customer"
+         xmlns:ns3="http://xmlns.oracle.com/pcbpel/adapter/db/top/CustomerDB"
+         xmlns:oraext="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.ExtFunc"
+         xmlns:bpm="http://xmlns.oracle.com/bpmn20/extensions"
+         xmlns:xp20="http://www.oracle.com/XSL/Transform/java/oracle.tip.pc.services.functions.Xpath20"
+         xmlns:ess="http://xmlns.oracle.com/scheduler" xmlns:hwf="http://xmlns.oracle.com/bpel/workflow/xpath"
+         xmlns:xref="http://www.oracle.com/XSL/Transform/java/oracle.tip.xref.xpath.XRefXPathFunctions"
+         xmlns:dvm="http://www.oracle.com/XSL/Transform/java/oracle.tip.dvm.LookupValue"
+         xmlns:bpws="http://schemas.xmlsoap.org/ws/2003/03/business-process/"
+         xmlns:xdk="http://schemas.oracle.com/bpel/extension/xpath/function/xdk"
+         xmlns:ids="http://xmlns.oracle.com/bpel/services/IdentityService/xpath"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:ldap="http://schemas.oracle.com/xpath/extension/ldap">
+
+    <import ui:processWSDL="true" namespace="http://xmlns.oracle.com/Capstone1/CustomerSrv/CustomerService" location="../WSDLs/CustomerService.wsdl" importType="http://schemas.xmlsoap.org/wsdl/"/>
+    <!-- 
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        PARTNERLINKS                                                      
+        List of services participating in this BPEL process               
+      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    --> 
+  <partnerLinks>
+    <!-- 
+      The 'client' role represents the requester of this service. It is 
+      used for callback. The location and correlation information associated
+      with the client role are automatically set using WS-Addressing.
+    -->
+    <partnerLink name="customerservice_client" partnerLinkType="client:CustomerService" myRole="CustomerServiceProvider"/>
+    <partnerLink name="CustomerDB" partnerLinkType="ns1:CustomerDB_plt" partnerRole="CustomerDB_role"/>
+  </partnerLinks>
+
+  <!-- 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      VARIABLES                                                        
+      List of messages and XML documents used within this BPEL process 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  -->
+  <variables>
+    <!-- Reference to the message passed as input during initiation -->
+    <variable name="inputVariable" messageType="client:CustomerServiceRequestMessage"/>
+
+    <!-- Reference to the message that will be returned to the requester-->
+    <variable name="outputVariable" messageType="client:CustomerServiceResponseMessage"/>
+    <variable name="CheckCustomer_CustomerDBSelect_InputVariable" messageType="ns1:CustomerDBSelect_inputParameters"/>
+    <variable name="CheckCustomer_CustomerDBSelect_OutputVariable" messageType="ns1:CustomerCollection_msg"/>
+    <variable name="AddCustomer_insert_InputVariable" messageType="ns1:CustomerCollection_msg"/>
+  </variables>
+
+  <!-- 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     ORCHESTRATION LOGIC                                               
+     Set of activities coordinating the flow of messages across the    
+     services integrated within this business process                  
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  -->
+  <sequence name="main">
+
+    <!-- Receive input from requestor. (Note: This maps to operation defined in CustomerService.wsdl) -->
+    <receive name="receiveInput" partnerLink="customerservice_client" portType="client:CustomerService" operation="process" variable="inputVariable" createInstance="yes"/>
+    <assign name="AssCheckCustomer">
+      <copy>
+        <from>$inputVariable.payload/ns2:Customer_id</from>
+        <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$CheckCustomer_CustomerDBSelect_InputVariable.CustomerDBSelect_inputParameters/ns3:cid</to>
+      </copy>
+    </assign>
+    <invoke name="CheckCustomer" bpelx:invokeAsDetail="no" partnerLink="CustomerDB" portType="ns1:CustomerDB_ptt"
+            operation="CustomerDBSelect" inputVariable="CheckCustomer_CustomerDBSelect_InputVariable"
+            outputVariable="CheckCustomer_CustomerDBSelect_OutputVariable"/>
+    <if name="If1">
+      <condition>$CheckCustomer_CustomerDBSelect_OutputVariable.CustomerCollection/ns3:Customer/ns3:name != ""</condition>
+      <assign name="AssCustExist">
+        <copy>
+          <from>'The customer already exist'</from>
+          <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns2:status</to>
+        </copy>
+      </assign>
+      <else>
+        <sequence name="Sequence1">
+          <assign name="AssignAddCust">
+            <copy>
+              <from>$inputVariable.payload/ns2:Customer_id</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$AddCustomer_insert_InputVariable.CustomerCollection/ns3:Customer/ns3:customerId</to>
+            </copy>
+            <copy>
+              <from>$inputVariable.payload/ns2:name</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$AddCustomer_insert_InputVariable.CustomerCollection/ns3:Customer/ns3:name</to>
+            </copy>
+            <copy>
+              <from>$inputVariable.payload/ns2:gender</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$AddCustomer_insert_InputVariable.CustomerCollection/ns3:Customer/ns3:gender</to>
+            </copy>
+            <copy>
+              <from>$inputVariable.payload/ns2:contact_details</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$AddCustomer_insert_InputVariable.CustomerCollection/ns3:Customer/ns3:contactDetails</to>
+            </copy>
+            <copy>
+              <from>$inputVariable.payload/ns2:cibil</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$AddCustomer_insert_InputVariable.CustomerCollection/ns3:Customer/ns3:cibil</to>
+            </copy>
+          </assign>
+          <invoke name="AddCustomer" bpelx:invokeAsDetail="no" partnerLink="CustomerDB" portType="ns1:CustomerDB_ptt"
+                  operation="insert" inputVariable="AddCustomer_insert_InputVariable"/>
+          <assign name="Success">
+            <copy>
+              <from>'New Customer Added successfully'</from>
+              <to expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath1.0">$outputVariable.payload/ns2:status</to>
+            </copy>
+          </assign>
+        </sequence>
+      </else>
+    </if>
+    <!-- Generate reply to synchronous request -->
+    <reply name="replyOutput" partnerLink="customerservice_client" portType="client:CustomerService" operation="process" variable="outputVariable"/>
+  </sequence>
+</process>

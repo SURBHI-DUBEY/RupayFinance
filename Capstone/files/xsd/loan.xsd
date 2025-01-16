@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="windows-1252" ?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.example.org/ns/Loan"
+            targetNamespace="http://www.example.org/ns/Loan" elementFormDefault="qualified">
+  <xsd:element name="LoanRequest">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="loan_id" type="xsd:integer"/>
+        <xsd:element name="loan_type" type="xsd:string"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+  <xsd:element name="LoanResponse">
+    <xsd:complexType>
+      <xsd:sequence>
+        <xsd:element name="status" type="xsd:string"/>
+      </xsd:sequence>
+    </xsd:complexType>
+  </xsd:element>
+
+</xsd:schema>

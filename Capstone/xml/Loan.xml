@@ -1,0 +1,8 @@
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body xmlns:ns1="http://www.example.org/ns/Loan">
+    <ns1:Loan>
+      <ns1:Loan_id>1</ns1:Loan_id>
+      <ns1:Loan_type>Business Loan</ns1:Loan_type>
+    </ns1:Loan>
+  </soap:Body>
+</soap:Envelope>
